@@ -551,6 +551,23 @@ function ACP:OnLoad(this)
         exclusive = 1,
         preferredIndex = 3,
     }
+    StaticPopupDialogs["RELOAD_CONFIRM_SET"] = {
+        text = L["Zone type change detected. Load set [%s] for [%s]?"],
+        button1 = YES,
+        button2 = CANCEL,
+        OnAccept = function(this)            
+            ACP:DisableAllAddons()
+            ACP:LoadSet(savedVar.loadingSet)            
+            ReloadUI()
+        end,
+        OnCancel = function()
+            StaticPopup_Hide ("RELOAD_CONFIRM_SET");
+        end,
+        timeout = 0,
+        whileDead = false,
+        hideOnEscape = true,
+        preferredIndex = 3,
+    }
 
     local function OnRenameSet(this)
         local popup;
@@ -595,7 +612,7 @@ function ACP:OnLoad(this)
     end
     ACP_AddonListHeaderTitle:SetText(title)
     this:RegisterEvent("ADDON_LOADED")
-
+    this:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     this:RegisterForDrag("LeftButton");
 
     local _
@@ -618,6 +635,7 @@ function ACP:OnEvent(this, event, arg1, arg2, arg3)
         if not ACP_Data then ACP_Data = {} end
 
         savedVar = ACP_Data
+        savedVar.loadingSet = nil
 
         savedVar.ProtectedAddons = savedVar.ProtectedAddons or {
             ["ACP"] = true
@@ -703,6 +721,21 @@ function ACP:OnEvent(this, event, arg1, arg2, arg3)
 
     if event == "ADDON_LOADED" then
         ACP:ADDON_LOADED(arg1)
+    end
+
+    if event == "ZONE_CHANGED_NEW_AREA" then
+        local name, type = GetInstanceInfo()
+        
+        if savedVar.UseForRaidDungeons ~= nil and type=='party' and savedVar.currentSet ~= savedVar.UseForRaidDungeons then
+            local setName = ACP:GetSetName(savedVar.UseForRaidDungeons)
+            savedVar.loadingSet = savedVar.UseForRaidDungeons
+            StaticPopup_Show("RELOAD_CONFIRM_SET", setName, L["Raid/Dungeons"])
+        end
+        if savedVar.UseForOpenWorld ~= nil and type=='none' and savedVar.currentSet ~= savedVar.UseForOpenWorld then
+            local setName = ACP:GetSetName(savedVar.UseForOpenWorld)
+            savedVar.loadingSet = savedVar.UseForOpenWorld
+            StaticPopup_Show("RELOAD_CONFIRM_SET", setName, L["Open World"])            
+        end        
     end
 
 end
@@ -1329,7 +1362,8 @@ function ACP:LoadSet(set)
 
     self:Print(L["Addons [%s] Loaded."]:format(self:GetSetName(set)))
     ACP:AddonList_OnShow()
-
+    CloseDropDownMenus(1)
+    savedVar.currentSet = set
 end
 
 function ACP:IsAddOnProtected(addon)
@@ -1377,6 +1411,33 @@ function ACP:RenameSet(set, name)
 
     self:Print(L["Addons [%s] renamed to [%s]."]:format(oldName, name))
 
+end
+
+-- Function for Use For Raid/Dungeons
+function ACP:UseForRaidDungeons(set)
+    local setName = self:GetSetName(set)
+    if savedVar.UseForOpenWorld == set then
+        self:Print(L["Set [%s] already in use by Open World."]:format(setName))    
+        return
+    end
+
+    savedVar.UseForRaidDungeons = set    
+    CloseDropDownMenus(1)
+    self:Print(L["Addons [%s] updated for use in Raid/Dungeons."]:format(setName))
+end
+--
+
+-- Function for Use For OpenWorld
+function ACP:UseForOpenWorld(set)
+    local setName = self:GetSetName(set)
+    if savedVar.UseForRaidDungeons == set then
+        self:Print(L["Set [%s] already in use by Raid/Dungeons."]:format(setName))
+        return
+    end
+
+    savedVar.UseForOpenWorld = set    
+    CloseDropDownMenus(1)
+    self:Print(L["Addons [%s] updated for use in Open World."]:format(setName))
 end
 
 -- Rebuild sortedAddonList from masterAddonList
@@ -1784,7 +1845,10 @@ function ACP:SetDropDown_Populate(level)
 
     if level == 1 then
 
-        local info, count, name
+        local info, count, name, extraInfo, currentSet
+        currentSet = ''
+        extraInfo = ''
+
         for i=1,ACP_SET_SIZE do
             local name = nil
 
@@ -1797,8 +1861,22 @@ function ACP:SetDropDown_Populate(level)
 
             name = self:GetSetName(i)
 
+            if savedVar.currentSet == i then
+                currentSet="*"
+            else
+                currentSet=""
+            end
+
+            if savedVar.UseForRaidDungeons == i then
+                extraInfo=L["- Raid/Dungeons"]
+            elseif savedVar.UseForOpenWorld == i then
+                extraInfo=L["- Open World"]
+            else
+                extraInfo=""
+            end
+                        
             info = UIDropDownMenu_CreateInfo()
-            info.text = string.format("%s (%d)", name, count)
+            info.text = string.format("%s (%d) %s%s", name, count, extraInfo, currentSet)
             info.value = i
             info.hasArrow = 1
             info.notCheckable = 1
@@ -1879,6 +1957,17 @@ function ACP:SetDropDown_Populate(level)
             UIDropDownMenu_AddButton(info, level)
         end
 
+        info = UIDropDownMenu_CreateInfo()
+        info.text = L["Use for Raid/Dungeons"]
+        info.func = function() self:UseForRaidDungeons(UIDROPDOWNMENU_MENU_VALUE) end
+        info.notCheckable = 1
+        UIDropDownMenu_AddButton(info, level)
+
+        info = UIDropDownMenu_CreateInfo()
+        info.text = L["Use for Open World"]
+        info.func = function() self:UseForOpenWorld(UIDROPDOWNMENU_MENU_VALUE) end
+        info.notCheckable = 1
+        UIDropDownMenu_AddButton(info, level)
     end
 
 
