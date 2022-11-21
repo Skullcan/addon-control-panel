@@ -498,7 +498,7 @@ function ACP:OnLoad(this)
     _G[ACP_FRAME_NAME .. "EnableAll"]:SetText(L["Enable All"])
     _G[ACP_FRAME_NAME .. "SetButton"]:SetText(L["Sets"])
     _G[ACP_FRAME_NAME .. "_ReloadUI"]:SetText(L["ReloadUI"])
-    _G[ACP_FRAME_NAME .. "BottomClose"]:SetText(L["Close"])
+    _G[ACP_FRAME_NAME .. "BottomClose"]:SetText(L["Close"])    
 
 
     UIPanelWindows[ACP_FRAME_NAME] = {
@@ -671,8 +671,9 @@ function ACP:OnEvent(this, event, arg1, arg2, arg3)
 
         self:ToggleRecursion(not savedVar.NoRecurse)
         _G[ACP_FRAME_NAME .. "_NoRecurseText"]:SetText(L["Recursive"])
-
-
+        self:ToggleRecursion(savedVar.AutoLoadProfiles)
+        _G[ACP_FRAME_NAME .. "_AutoLoadProfiles"]:SetText(L["AutoLoad"])
+        
         this:RegisterEvent("PLAYER_ENTERING_WORLD")
     elseif event == "PLAYER_ALIVE" then
 
@@ -726,12 +727,12 @@ function ACP:OnEvent(this, event, arg1, arg2, arg3)
     if event == "ZONE_CHANGED_NEW_AREA" then
         local name, type = GetInstanceInfo()
         
-        if savedVar.UseForRaidDungeons ~= nil and type=='party' and savedVar.currentSet ~= savedVar.UseForRaidDungeons then
+        if savedVar.UseForRaidDungeons ~= nil and type=='party' and savedVar.currentSet ~= savedVar.UseForRaidDungeons and savedVar.AutoLoadProfiles then
             local setName = ACP:GetSetName(savedVar.UseForRaidDungeons)
             savedVar.loadingSet = savedVar.UseForRaidDungeons
             StaticPopup_Show("RELOAD_CONFIRM_SET", setName, L["Raid/Dungeons"])
         end
-        if savedVar.UseForOpenWorld ~= nil and type=='none' and savedVar.currentSet ~= savedVar.UseForOpenWorld then
+        if savedVar.UseForOpenWorld ~= nil and type=='none' and savedVar.currentSet ~= savedVar.UseForOpenWorld and savedVar.AutoLoadProfiles then
             local setName = ACP:GetSetName(savedVar.UseForOpenWorld)
             savedVar.loadingSet = savedVar.UseForOpenWorld
             StaticPopup_Show("RELOAD_CONFIRM_SET", setName, L["Open World"])            
@@ -1163,6 +1164,20 @@ function ACP:ReloadAddonList()
     local button = _G[ACP_FRAME_NAME .. "SortDropDown"]
     UIDropDownMenu_SetSelectedValue(button, builder)
 
+end
+
+function ACP:ToggleAutoLoadProfiles(val)
+    if val == nil then
+        savedVar.AutoLoadProfiles = not savedVar.AutoLoadProfiles
+    else
+        savedVar.AutoLoadProfiles = not val
+    end
+
+    local frame = _G[ACP_FRAME_NAME .. "_AutoLoadProfiles"]
+
+    frame:SetChecked(savedVar.AutoLoadProfiles)
+    
+--    ACP:Print(L["Auto Load Profiles is now %s"]:format(CLR:Bool(not savedVar.AutoLoadProfiles, tostring(not savedVar.AutoLoadProfiles))))
 end
 
 --function ACP:OnKeyDown(this, key)
@@ -1771,6 +1786,8 @@ function ACP:AddonList_OnShow_Fast(this)
                 else
                     checkbox:Show()
                     checkbox:SetChecked(enabled)
+                    
+                    --self:Print(name .. CLR:Bool(enabled, (enabled and " ENABLED" or " DISABLED")))
                 end
 
                 if addonIdx < origNumAddons and
@@ -2218,7 +2235,10 @@ function ACP_EnableRecurse(name, skip_children)
 
     if (type(name) == "string" and strlen(name) > 0) or 
         (type(name) == "number" and name > 0) then
-
+        
+        -- debug dependencies
+        -- ACP:Print("Addon loaded as dependecy. " .. name)
+                
         EnableAddOn(name, UnitName("player"))
 
         if not skip_children then

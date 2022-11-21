@@ -175,7 +175,7 @@
             <!--</OnClick>-->
         <!--</Scripts>-->
     <!--</Button>-->
-    <Frame name="ACP_AddonList" hidden="true" toplevel="true" enableMouse="true" moveable="true" enableKeyboard="false">
+    <Frame name="ACP_AddonList" hidden="true" toplevel="true" enableMouse="true" enableKeyboard="false">
         <Size>
             <AbsDimension x="640" y="512"/>
         </Size>
@@ -218,6 +218,40 @@
                         end
                         ACP:ReloadAddonList()
                     </OnClick>
+                </Scripts>
+                <NormalTexture file="Interface\Buttons\UI-CheckBox-Up"/>
+                <PushedTexture file="Interface\Buttons\UI-CheckBox-Down"/>
+                <HighlightTexture file="Interface\Buttons\UI-CheckBox-Highlight" alphaMode="ADD"/>
+                <CheckedTexture file="Interface\Buttons\UI-CheckBox-Check"/>
+                <DisabledCheckedTexture file="Interface\Buttons\UI-CheckBox-Check-Disabled"/>
+            </CheckButton>
+            <CheckButton name="$parent_AutoLoadProfiles">
+                <Size>
+                    <AbsDimension x="32" y="32"/>
+                </Size>
+                <Anchors>
+                    <Anchor point="TOPLEFT" x="40" y="-20"/>
+                </Anchors>
+                <Layers>
+                    <Layer level="ARTWORK">
+                        <FontString inherits="GameFontNormalSmall" text="Auto load profiles">
+                            <Anchors>
+                                <Anchor point="LEFT" x="36" y="0"/>
+                            </Anchors>
+                        </FontString>
+                    </Layer>
+                </Layers>
+                <Scripts>
+                    <OnClick>
+                        ACP:ToggleAutoLoadProfiles()
+                    </OnClick>
+                    <OnEnter>
+                        GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+                        GameTooltip:SetText(ACP.L["AutoLoadProfiles-ToolTip"], nil, nil, nil, nil, 1);
+                    </OnEnter>
+                    <OnLeave>
+                        GameTooltip:Hide();
+                    </OnLeave>
                 </Scripts>
                 <NormalTexture file="Interface\Buttons\UI-CheckBox-Up"/>
                 <PushedTexture file="Interface\Buttons\UI-CheckBox-Down"/>
